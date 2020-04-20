@@ -11,6 +11,8 @@ using namespace std;
 struct Node {
     string data;
     vector <Node> edgeList;
+    vector <int> edgeVertexList;
+    
     int noOfIncomingEdges;
 
 }; 
@@ -72,6 +74,7 @@ class DirectedGraph {
                             for(int l=0; l<n;l++) {
                                 if(nodeList[l].data==second.data) {
                                     nodeList[l].noOfIncomingEdges++;
+                                    nodeList[i].edgeVertexList.push_back(l);
                                     break;
                                 }
                             }
@@ -92,6 +95,8 @@ class DirectedGraph {
                     for(int j=0; j<v; j++) {
                         if(nodeList[i].edgeList[j].data==second.data) {
                             nodeList[i].edgeList.erase(nodeList[i].edgeList.begin()+j);
+                            nodeList[i].edgeVertexList.erase(nodeList[i].edgeVertexList.begin()+j);
+                            
                             //find out if all incoming edges to second have been removed. 
                             // if so identify that this node has NO incoming edges
                             for(int l=0; l<n;l++) {
@@ -164,8 +169,8 @@ class Main {
 
         for (int j = 0; j < myNodesList.size(); j++) {
             //random edge node from a node
-            int x = rand()%((myNodesList.size() - (j+1)) + 1) + (j+1);
-            for (int k = j+1; k < x; k++)
+            int x = rand()%(myNodesList.size()/(myNodesList.size()/10))+j;
+            for (int k = j+1; k<x && x<myNodesList.size() ; k++)
                     myDirectedGraph.addDirectedEdge(myNodesList[j], myNodesList[k]);
         }  
 
@@ -183,8 +188,7 @@ class TopSort {
         vector <Node> sortedList;
         DirectedGraph myGraph = pGraph;
         vector <Node> nodeListWithNoIncomingEdge;
-        
-        
+
         //create a "no incoming edges" list for processing
         for(int i=0; i<myGraph.getAllNodes().size();i++) {
             if((myGraph.getAllNodes())[i].noOfIncomingEdges==0) {
@@ -207,21 +211,11 @@ class TopSort {
             int v=tNode.edgeList.size();
             for(int j=0; j<v; j++) {
 
-                //remove edge
-                Node edgeNode = tNode.edgeList[j];
+                myGraph.removeDirectedEdge (tNode, tNode.edgeList[j]);
 
-                myGraph.removeDirectedEdge (tNode, edgeNode);
-
-                //refresh the nodeList and edgeNode variables after removing an edge
-                for(int k=0; k<myGraph.getAllNodes().size(); k++) {
-                        if((myGraph.getAllNodes())[k].data==edgeNode.data) {
-                            edgeNode=(myGraph.getAllNodes())[k];
-                            break;
-                        }
-                }
                 //if this edge node does not have any incoming edges then add it to the no incoming edgles list for reprocessing
-                if (edgeNode.noOfIncomingEdges==0)
-                    nodeListWithNoIncomingEdge.push_back(edgeNode);
+                if ((myGraph.getAllNodes())[tNode.edgeVertexList[j]].noOfIncomingEdges==0)
+                    nodeListWithNoIncomingEdge.push_back((myGraph.getAllNodes())[tNode.edgeVertexList[j]]);
                  
             }
         }     
@@ -252,49 +246,31 @@ class TopSort {
 
         for (int i = 0; i < myGraph.getAllNodes().size(); i++) 
             visited.push_back(false);      
-    
+        
         for(int i=0; i<myGraph.getAllNodes().size();i++) {
             if(!visited[i]) {
-                S.push((myGraph.getAllNodes())[i]);
-            }   
-
-            while (!S.empty()) {
-                Node cur=S.top();
-                S.pop(); 
-                if (stoi(cur.data) < 0) {
-                    Node cur1 = cur;
-                    cur1.data = to_string(stoi(cur1.data) * -1);
-                    tempStack.push(cur1);
-                }
-                else 
-                {
-                    Node cur1 = cur;
-                    cur1.data = to_string(stoi(cur1.data) * -1);
-                    S.push(cur1);
-
-                    //traverse all edges of node on the top of the stack - first edge node goes to the bottom of stack
-                    for (int j=0; j<cur.edgeList.size();j++) {
-                        for  (int k = 0; k < myGraph.getAllNodes().size(); k++) {
-                            if ((myGraph.getAllNodes())[k].data==cur.edgeList[j].data) {
-                                if(!visited[k]) {
-                                    visited[k]=true;
-                                    S.push((myGraph.getAllNodes())[k]);
-                                    break;
-                                }
-                            }
+                visited[i]=true;
+    
+                if ((myGraph.getAllNodes())[i].edgeList.size() >0) {
+    
+                    for (int j=0; j<(myGraph.getAllNodes())[i].edgeList.size();j++) {
+                        
+                        int k=(myGraph.getAllNodes())[i].edgeVertexList[j];
                             
+                        if(!visited[k]) {
+                            visited[k]=true;
+                            S.push((myGraph.getAllNodes())[k]);
                         }
+
                     }
                 }
-            }
-            
-            
-        }
-        
-        while (!tempStack.empty()){
-            Node cur=tempStack.top();
-            tempStack.pop();             
-            
+                S.push((myGraph.getAllNodes())[i]);
+            }            
+        }    
+         
+        while (!S.empty()){
+            Node cur=S.top();
+            S.pop();
             sortedList.push_back (cur);
         }
         
@@ -313,7 +289,7 @@ int main() {
     cout<<"START"<<"\n";
 
     cout<<"CREATE RANDOM DIRECTED UNWEIGHTED GRAPH"<<"\n";
-    myDirectedGraph=myGraphMain.createRandomDAGIter(10);
+    myDirectedGraph=myGraphMain.createRandomDAGIter(1000);
     printGraph (myDirectedGraph.getAllNodes());
 
     cout<<"PRINT KAHNS"<<"\n";
@@ -322,9 +298,8 @@ int main() {
 
     cout<<"PRINT DFS"<<"\n";
     myArrayList = myTopSort.mDFS(myDirectedGraph); 
-
     printArray(myArrayList);
-       
+     
     cout<<"END"<<"\n";
 
 
